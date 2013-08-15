@@ -23,7 +23,6 @@ module Notably
     end
 
     def initialize(*attributes_hashes)
-      @@mutex ||= Mutex.new
       @data = {}
       @groups = []
       attributes_hashes.each do |attributes|
@@ -49,22 +48,20 @@ module Notably
     end
 
     def save
-      @@mutex.synchronize do
-        receivers.each do |receiver|
-          # look for groupable messages within group_within
-          # group_within = self.class.group_within.arity == 1 ? self.class.group_within.call(user) : self.class.group_within.call
-          group_within = self.class.group_within.call(receiver)
-          groupable_notifications = receiver.notifications_since(group_within)
-          groupable_notifications.select! { |notification| notification[:data] == data }
+      receivers.each do |receiver|
+        # look for groupable messages within group_within
+        # group_within = self.class.group_within.arity == 1 ? self.class.group_within.call(user) : self.class.group_within.call
+        group_within = self.class.group_within.call(receiver)
+        groupable_notifications = receiver.notifications_since(group_within)
+        groupable_notifications.select! { |notification| notification[:data] == data }
+        groupable_notifications.each do |notification|
+          @groups += notification[:groups]
+        end
+        Notably.config.redis.pipelined do
+          receiver.push_notification(marshal, created_at.to_i)
           groupable_notifications.each do |notification|
-            @groups += notification[:groups]
-          end
-          Notably.config.redis.pipelined do
-            receiver.push_notification(marshal, created_at.to_i)
-            groupable_notifications.each do |notification|
-              receiver.delete_notification(notification.marshal)
-              @groups -= notification[:groups]
-            end
+            receiver.delete_notification(Marshal.dump(notification))
+            @groups -= notification[:groups]
           end
         end
       end
