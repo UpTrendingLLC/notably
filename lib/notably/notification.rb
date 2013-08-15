@@ -127,7 +127,7 @@ module Notably
         if block
           @group_within = block
         else
-          @group_within ||= ->(receiver) { receiver.last_notification_read_at.value }
+          @group_within ||= ->(receiver) { receiver.last_notification_read_at }
         end
       end
     end
