@@ -34,7 +34,7 @@ module Notably
           else
             @data = attributes.slice(*self.class.group_by)
           end
-          @groups << self.class.grouper.new(*attributes.except(*self.class.group_by).values)
+          @groups << OpenStruct.new(attributes.except(*self.class.group_by))
         else
           raise ArgumentError, "Object #{attributes} does not respond to all required attributes" unless self.class.required_attributes.all? { |k| attributes.respond_to? k }
           if @data.any?
@@ -42,7 +42,7 @@ module Notably
           else
             @data = Hash[self.class.group_by.collect { |k| [k, attributes.send(k)] }]
           end
-          @groups << self.class.grouper.new(*(self.class.required_attributes - self.class.group_by).collect { |k| attributes.send(k) })
+          @groups << OpenStruct.new(Hash[(self.class.required_attributes - self.class.group_by).collect { |k| [k, attributes.send(k)] }])
         end
       end
     end
@@ -129,10 +129,6 @@ module Notably
         else
           @group_within ||= ->(receiver) { receiver.last_notification_read_at.value }
         end
-      end
-
-      def grouper
-        @grouper ||= Struct.new("#{self.to_s}Grouper", *(required_attributes - group_by)) if @group_by.any?
       end
     end
 
