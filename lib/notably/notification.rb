@@ -54,8 +54,7 @@ module Notably
           # look for groupable messages within group_within
           # group_within = self.class.group_within.arity == 1 ? self.class.group_within.call(user) : self.class.group_within.call
           group_within = self.class.group_within.call(receiver)
-          groupable_notifications = receiver.notifications.revrangebyscore(Time.now.to_i, group_within.to_i)
-          groupable_notifications.collect! { |notification| Marshal.load(notification) }
+          groupable_notifications = receiver.notifications_since(group_within)
           groupable_notifications.select! { |notification| notification[:data] == data }
           groupable_notifications.each do |notification|
             @groups += notification[:groups]

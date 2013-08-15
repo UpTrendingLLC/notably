@@ -2,23 +2,27 @@ module Notably
   module Notifiable
 
     def unread_notifications
-      Notably.config.redis.zrevrangebyscore(notification_key, Time.now.to_i, last_notification_read_at).collect { |n| Marshal.load(n) }
+      parse_notifications(Notably.config.redis.zrevrangebyscore(notification_key, Time.now.to_i, last_notification_read_at))
     end
 
     def unread_notifications!
-      Notably.config.redis.zrevrangebyscore(notification_key, Time.now.to_i, Notably.config.redis.getset(last_notification_read_at_key, Time.now.to_i)).collect { |n| Marshal.load(n) }
+      parse_notifications(Notably.config.redis.zrevrangebyscore(notification_key, Time.now.to_i, Notably.config.redis.getset(last_notification_read_at_key, Time.now.to_i)))
     end
 
     def notifications
-      Notably.config.redis.zrevrangebyscore(notification_key, Time.now.to_i, 0).collect { |n| Marshal.load(n) }
+      parse_notifications(Notably.config.redis.zrevrangebyscore(notification_key, Time.now.to_i, 0))
+    end
+
+    def notifications_since(time)
+      parse_notifications(Notably.config.redis.zrevrangebyscore(notification_key, Time.now.to_i, time.to_i))
     end
 
     def read_notifications
-      Notably.config.redis.zrevrangebyscore(notification_key, last_notification_read_at, 0).collect { |n| Marshal.load(n) }
+      parse_notifications(Notably.config.redis.zrevrangebyscore(notification_key, last_notification_read_at, 0))
     end
 
     def read_notifications!
-      Notably.config.redis.set(last_notification_read_at_key, Time.now.to_i)
+      parse_notifications(Notably.config.redis.set(last_notification_read_at_key, Time.now.to_i))
     end
 
     def last_notification_read_at
@@ -41,6 +45,10 @@ module Notably
 
     def last_notification_read_at_key
       "notably:last_read_at:#{self.class}:#{self.id}"
+    end
+
+    def parse_notifications(notifications)
+      notifications.collect { |n| Marshal.load(n) }
     end
   end
 end
