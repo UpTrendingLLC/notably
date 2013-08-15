@@ -5,8 +5,8 @@ module Notably
     def self.included(base)
       base.extend(ClassMethods)
       if defined?(Rails) && defined?(ActionView)
+        base.send(:include, ActionView::Helpers)
         base.send(:include, Rails.application.routes.url_helpers)
-        base.send(:include, ActionView::Helpers::UrlHelper)
       end
     end
 
@@ -58,9 +58,9 @@ module Notably
           @groups += notification[:groups]
         end
         Notably.config.redis.pipelined do
-          receiver.push_notification(marshal, created_at.to_i)
+          Notably.config.redis.zadd(receiver.send(:notification_key), created_at.to_i, marshal)
           groupable_notifications.each do |notification|
-            receiver.delete_notification(Marshal.dump(notification))
+            Notably.config.redis.zrem(receiver.send(:notification_key), Marshal.dump(notification))
             @groups -= notification[:groups]
           end
         end
