@@ -32,7 +32,7 @@ module Notably
           if @data.any?
             raise ArgumentError, "Group by fields do not have shared values" unless @data == attributes.slice(*self.class.group_by)
           else
-            @data = attributes.slice(*self.class.group_by)
+            @data = attributes
           end
           @groups << OpenStruct.new(attributes.except(*self.class.group_by))
         else
@@ -40,7 +40,7 @@ module Notably
           if @data.any?
             raise ArgumentError, "Group by fields do not have shared values" unless @data == Hash[self.class.group_by.collect { |k| [k, attributes.send(k)] }]
           else
-            @data = Hash[self.class.group_by.collect { |k| [k, attributes.send(k)] }]
+            @data = Hash[self.class.required_attributes.collect { |k| [k, attributes.send(k)] }]
           end
           @groups << OpenStruct.new(Hash[(self.class.required_attributes - self.class.group_by).collect { |k| [k, attributes.send(k)] }])
         end
@@ -53,7 +53,7 @@ module Notably
         # group_within = self.class.group_within.arity == 1 ? self.class.group_within.call(user) : self.class.group_within.call
         group_within = self.class.group_within.call(receiver)
         groupable_notifications = receiver.notifications_since(group_within)
-        groupable_notifications.select! { |notification| notification[:data] == data }
+        groupable_notifications.select! { |notification| notification[:data].slice(*self.class.group_by) == data.slice(*self.class.group_by) }
         groupable_notifications.each do |notification|
           @groups += notification[:groups]
         end
