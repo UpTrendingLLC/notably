@@ -160,8 +160,11 @@ But where's the fun in that?
 Ok so things are looking pretty good, except the Save Our Bluths post is getting kind of popular, and my notification feed looks like this:
 
 > Michael B. commented on [Save Our Bluths](#)
+
 > Lucille B. commented on [Save Our Bluths](#)
+
 > Buster B. commented on [Save Our Bluths](#)
+
 > Tobius F. commented on [Save Our Bluths](#)
 
 It would be nicer if it looked like
