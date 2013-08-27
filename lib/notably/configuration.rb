@@ -1,12 +1,10 @@
 module Notably
   class Configuration
-    attr_writer :redis
+    attr_accessor :redis, :touch_receivers
 
     def initialize
-    end
-
-    def redis
-      @redis ||= Redis.current
+      @redis = Redis.current
+      @touch_receivers = true
     end
   end
 end

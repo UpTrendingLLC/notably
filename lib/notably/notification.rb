@@ -61,6 +61,7 @@ module Notably
         end
         Notably.config.redis.pipelined do
           Notably.config.redis.zadd(receiver.send(:notification_key), created_at.to_i, marshal)
+          receiver.touch if Notably.config.touch_receivers
           if self.class.group?
             groupable_notifications.each do |notification|
               Notably.config.redis.zrem(receiver.send(:notification_key), Marshal.dump(notification))
