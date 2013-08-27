@@ -51,17 +51,21 @@ module Notably
       receivers.each do |receiver|
         # look for groupable messages within group_within
         # group_within = self.class.group_within.arity == 1 ? self.class.group_within.call(user) : self.class.group_within.call
-        group_within = self.class.group_within.call(receiver)
-        groupable_notifications = receiver.notifications_since(group_within)
-        groupable_notifications.select! { |notification| notification[:data].slice(*self.class.group_by) == data.slice(*self.class.group_by) }
-        groupable_notifications.each do |notification|
-          @groups += notification[:groups]
+        if self.class.group?
+          group_within = self.class.group_within.call(receiver)
+          groupable_notifications = receiver.notifications_since(group_within)
+          groupable_notifications.select! { |notification| notification[:data].slice(*self.class.group_by) == data.slice(*self.class.group_by) }
+          groupable_notifications.each do |notification|
+            @groups += notification[:groups]
+          end
         end
         Notably.config.redis.pipelined do
           Notably.config.redis.zadd(receiver.send(:notification_key), created_at.to_i, marshal)
-          groupable_notifications.each do |notification|
-            Notably.config.redis.zrem(receiver.send(:notification_key), Marshal.dump(notification))
-            @groups -= notification[:groups]
+          if self.class.group?
+            groupable_notifications.each do |notification|
+              Notably.config.redis.zrem(receiver.send(:notification_key), Marshal.dump(notification))
+              @groups -= notification[:groups]
+            end
           end
         end
       end
@@ -121,6 +125,10 @@ module Notably
         else
           @group_by ||= []
         end
+      end
+
+      def group?
+        @group_by.any?
       end
 
       def group_within(block=nil)
