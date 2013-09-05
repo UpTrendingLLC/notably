@@ -1,6 +1,8 @@
 # Notably
 
-Notably is a redis-backed notification system.
+![a pretty aggressive slogan](notably-slogan.png)
+
+Notably is a redis-backed notification system that _won't_ make you sick and kill you.
 
 ## Installation
 
