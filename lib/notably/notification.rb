@@ -109,7 +109,14 @@ module Notably
     module ClassMethods
       attr_reader :callbacks
 
-      @callbacks = {after_notify: [], before_notify: []}
+      def self.extended(base)
+        base.class_eval do
+          @callbacks = {after_notify: [], before_notify: []}
+          @group_by = []
+          @group_within = ->(receiver) { receiver.last_notification_read_at }
+          @required_attributes = []
+        end
+      end
 
       def create(attributes={})
         new(attributes).save
@@ -117,19 +124,17 @@ module Notably
 
       def required_attributes(*args)
         if args.any?
-          @required_attributes ||= []
           @required_attributes += args
         else
-          @required_attributes ||= []
+          @required_attributes
         end
       end
 
       def group_by(*args)
         if args.any?
-          @group_by ||= []
           @group_by += args
         else
-          @group_by ||= []
+          @group_by
         end
       end
 
@@ -141,7 +146,7 @@ module Notably
         if block
           @group_within = block
         else
-          @group_within ||= ->(receiver) { receiver.last_notification_read_at }
+          @group_within
         end
       end
 
