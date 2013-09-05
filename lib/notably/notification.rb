@@ -69,6 +69,7 @@ module Notably
             end
           end
         end
+        self.class.after_notify.call(receiver)
       end
     end
 
@@ -137,6 +138,14 @@ module Notably
           @group_within = block
         else
           @group_within ||= ->(receiver) { receiver.last_notification_read_at }
+        end
+      end
+
+      def after_notify(block=nil)
+        if block
+          @after_notify = block
+        else
+          @after_notify ||= -> {}
         end
       end
     end
