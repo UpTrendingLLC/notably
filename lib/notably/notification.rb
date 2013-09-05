@@ -69,7 +69,7 @@ module Notably
             end
           end
         end
-        self.class.after_notify.call(receiver)
+        self.class.callbacks[:after_notify].each { |callback| callback.call(receiver) }
       end
     end
 
@@ -107,6 +107,10 @@ module Notably
     end
 
     module ClassMethods
+      attr_reader :callbacks
+
+      @callbacks = {after_notify: [], before_notify: []}
+
       def create(attributes={})
         new(attributes).save
       end
@@ -143,11 +147,10 @@ module Notably
 
       def after_notify(block=nil)
         if block
-          @after_notify = block
-        else
-          @after_notify ||= -> {}
+          @callbacks[:after_notify] << block
         end
       end
+
     end
 
   end
