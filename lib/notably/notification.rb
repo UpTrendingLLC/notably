@@ -50,7 +50,6 @@ module Notably
     def save
       receivers.each do |receiver|
         # look for groupable messages within group_within
-        # group_within = self.class.group_within.arity == 1 ? self.class.group_within.call(user) : self.class.group_within.call
         if self.class.group?
           group_within = self.class.group_within.call(receiver)
           groupable_notifications = receiver.notifications_since(group_within)
@@ -59,6 +58,7 @@ module Notably
             @groups += notification[:groups]
           end
         end
+        run_callbacks(:before_notify, receiver)
         Notably.config.redis.pipelined do
           Notably.config.redis.zadd(receiver.send(:notification_key), created_at.to_i, marshal)
           receiver.touch if Notably.config.touch_receivers
@@ -69,7 +69,7 @@ module Notably
             end
           end
         end
-        self.class.callbacks[:after_notify].each { |callback| callback.call(receiver) }
+        run_callbacks(:after_notify, receiver)
       end
     end
 
@@ -102,6 +102,19 @@ module Notably
           @data[method]
         else
           super
+        end
+      end
+    end
+
+    private
+
+    def run_callbacks(type, *args)
+      self.class.callbacks[type].each do |callback|
+        if callback.is_a? Symbol
+          # callback.to_proc.call(self, *args)
+          self.send(callback, *args)
+        else
+          self.instance_exec(*args, &callback)
         end
       end
     end
@@ -150,10 +163,12 @@ module Notably
         end
       end
 
-      def after_notify(block=nil)
-        if block
-          @callbacks[:after_notify] << block
-        end
+      def before_notify(method=nil, &block)
+        @callbacks[:before_notify] << (block || method)
+      end
+
+      def after_notify(method=nil, &block)
+        @callbacks[:after_notify] << (block || method)
       end
 
     end
