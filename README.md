@@ -1,5 +1,7 @@
 # Notably
 
+[![Gem Version](https://badge.fury.io/rb/notably.png)](http://badge.fury.io/rb/notably)
+
 ![a pretty aggressive slogan](notably-slogan.png)
 
 Notably is a redis-backed notification system that _won't_ make you sick and kill you.
