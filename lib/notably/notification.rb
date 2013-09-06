@@ -50,7 +50,6 @@ module Notably
     def save
       receivers.each do |receiver|
         # look for groupable messages within group_within
-        # group_within = self.class.group_within.arity == 1 ? self.class.group_within.call(user) : self.class.group_within.call
         if self.class.group?
           group_within = self.class.group_within.call(receiver)
           groupable_notifications = receiver.notifications_since(group_within)
@@ -59,6 +58,7 @@ module Notably
             @groups += notification[:groups]
           end
         end
+        run_callbacks(:before_notify, receiver)
         Notably.config.redis.pipelined do
           Notably.config.redis.zadd(receiver.send(:notification_key), created_at.to_i, marshal)
           receiver.touch if Notably.config.touch_receivers
@@ -69,6 +69,7 @@ module Notably
             end
           end
         end
+        run_callbacks(:after_notify, receiver)
       end
     end
 
@@ -105,26 +106,48 @@ module Notably
       end
     end
 
+    private
+
+    def run_callbacks(type, *args)
+      self.class.callbacks[type].each do |callback|
+        if callback.is_a? Symbol
+          # callback.to_proc.call(self, *args)
+          self.send(callback, *args)
+        else
+          self.instance_exec(*args, &callback)
+        end
+      end
+    end
+
     module ClassMethods
+      attr_reader :callbacks
+
+      def self.extended(base)
+        base.class_eval do
+          @callbacks = {after_notify: [], before_notify: []}
+          @group_by = []
+          @group_within = ->(receiver) { receiver.last_notification_read_at }
+          @required_attributes = []
+        end
+      end
+
       def create(attributes={})
         new(attributes).save
       end
 
       def required_attributes(*args)
         if args.any?
-          @required_attributes ||= []
           @required_attributes += args
         else
-          @required_attributes ||= []
+          @required_attributes
         end
       end
 
       def group_by(*args)
         if args.any?
-          @group_by ||= []
           @group_by += args
         else
-          @group_by ||= []
+          @group_by
         end
       end
 
@@ -136,9 +159,18 @@ module Notably
         if block
           @group_within = block
         else
-          @group_within ||= ->(receiver) { receiver.last_notification_read_at }
+          @group_within
         end
       end
+
+      def before_notify(method=nil, &block)
+        @callbacks[:before_notify] << (block || method)
+      end
+
+      def after_notify(method=nil, &block)
+        @callbacks[:after_notify] << (block || method)
+      end
+
     end
 
   end
