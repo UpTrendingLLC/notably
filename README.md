@@ -243,6 +243,29 @@ Or
 
 (Just a warning, even if you're setting it to something that doesn't need the receiver passed in to calculate it, you need to specify it as an argument if you're going to use lambdas. They don't like it when arguments get ignored.)
 
+## Callbacks
+
+You can use the `before_notify` and `after_notify` class methods to specify callbacks.  They work pretty much as expected taking a lambda, Proc, block, or symbol representing a method.  All of these need to accept an argument for the receiver:
+
+```ruby
+class CommentNotification
+  include Notably::Notification
+  required_attributes :comment_id, :commentable_type, :commentable_id, :author_id
+  group_by :commentable_type, :commentable_id
+  after_notify ->(receiver) { Rails.logger.info "Sent a comment notification to #{receiver.class} #{receiver.id}" }
+  after_notify do |receiver|
+    UserMailer.delay.new_comment(receiver.id, comment_id)
+  end
+  after_notify :foo
+
+  def foo(receiver)
+    Rails.logger.info "Foo"
+  end
+end
+```
+
+They're useful for sending email notifications, and probably a lot of other things, but email notifications was what we built this for.  As a side note, if you are using it to send emails, you'll want to have those emails go through some kind of worker queue so you don't massivly slow down notifications.  We recommend [sidekiq](https://github.com/mperham/sidekiq), because it runs on Redis, has a nice dashboard, and has a clean API.
+
 
 ## Contributing
 
